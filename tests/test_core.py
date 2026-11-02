@@ -18,7 +18,7 @@ def _write_bundle(path: Path, visible_name: str, uuid: str | None = None) -> Non
 
     Using the imported path exercises `render`'s folder-mirroring and
     incremental logic without depending on a parseable `.rm` stroke file;
-    stroke rendering itself is covered by the Leadership behaviour test.
+    stroke rendering itself is covered by the handwritten behaviour test.
     """
     if uuid is None:
         uuid = "11111111-1111-1111-1111-111111111111"
@@ -43,7 +43,9 @@ def _write_malformed_bundle(path: Path, visible_name: str) -> None:
     content = f'{{"cPages": {{"pages": [{{"id": "{missing_id}", "deleted": null}}]}}}}'
     with zipfile.ZipFile(path, "w") as zf:
         zf.writestr(f"{uuid}.content", content)
-        zf.writestr(f"{uuid}.metadata", f'{{"visibleName": "{visible_name}", "type": "DocumentType"}}')
+        zf.writestr(
+            f"{uuid}.metadata", f'{{"visibleName": "{visible_name}", "type": "DocumentType"}}'
+        )
 
 
 class TestFindRmapi:

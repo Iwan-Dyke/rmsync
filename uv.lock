@@ -387,6 +387,7 @@ dependencies = [
 dev = [
     { name = "pypdfium2" },
     { name = "pytest" },
+    { name = "rmscene" },
     { name = "ruff" },
 ]
 
@@ -401,6 +402,7 @@ requires-dist = [
 dev = [
     { name = "pypdfium2", specifier = "~=4.30" },
     { name = "pytest", specifier = "~=8.3" },
+    { name = "rmscene", specifier = "~=0.6" },
     { name = "ruff", specifier = "~=0.8" },
 ]
 

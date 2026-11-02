@@ -17,7 +17,7 @@ Several forces shaped the design:
   out to **Inkscape**, which is not installed and is a heavy dependency.
 - `rmc` 0.3.0 crashes with a `KeyError` when a stroke references a colour id
   newer than its built-in palette knows (observed with colour id 9 in real
-  notebooks, e.g. the "Leadership" notebook).
+  notebooks).
 - Imported documents already contain a perfectly good PDF.
 
 ## Decision
@@ -71,7 +71,7 @@ truthy `deleted` object (live pages carry `deleted: null`). A deleted page has
 no `<uuid>/<page_id>.rm` file in the archive, so including it crashed rendering
 with a `KeyError`. `read_bundle` now excludes any page with a truthy `deleted`
 value when building `page_ids`, alongside the existing `toc` skip. A notebook
-therefore renders only its live pages (e.g. Matrix: 16 declared, 1 deleted, 15
+therefore renders only its live pages (e.g. 16 declared, 1 deleted, 15
 rendered).
 
 **A listed-but-absent `.rm` is a hard error, not a silent skip.** If, after

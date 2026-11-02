@@ -39,10 +39,10 @@ rmsync render --force            # re-render everything
 rmsync sync                      # pull then render
 
 # custom locations (defaults shown)
-rmsync sync --source ~/org/remarkable --output ~/org/remarkable-pdf
+rmsync sync --source ~/remarkable --output ~/remarkable-pdf
 ```
 
-Defaults: source `~/org/remarkable`, output `~/org/remarkable-pdf`.
+Defaults: source `~/remarkable`, output `~/remarkable-pdf`.
 Renders are incremental — a notebook is skipped when its PDF is newer than the
 source bundle; `--force` overrides that.
 

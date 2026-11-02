@@ -10,8 +10,8 @@ from pathlib import Path
 from .bundle import Bundle, read_bundle
 from .render import render_bundle
 
-DEFAULT_SOURCE = Path.home() / "org" / "remarkable"
-DEFAULT_OUTPUT = Path.home() / "org" / "remarkable-pdf"
+DEFAULT_SOURCE = Path.home() / "remarkable"
+DEFAULT_OUTPUT = Path.home() / "remarkable-pdf"
 _RMAPI_FALLBACK = Path.home() / "go" / "bin" / "rmapi"
 
 

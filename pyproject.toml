@@ -19,6 +19,7 @@ rmsync = "rmsync.cli:main"
 dev = [
     "pytest~=8.3",
     "pypdfium2~=4.30",
+    "rmscene~=0.6",
     "ruff~=0.8",
 ]
 

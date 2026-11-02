@@ -2,30 +2,58 @@
 
 from __future__ import annotations
 
+import io
 import json
 import zipfile
 from pathlib import Path
 
-import pytest
+from rmscene import simple_text_document, write_blocks
 
 from rmsync.bundle import read_bundle
 
-FIXTURE = Path("/Users/Iwan.Dyke/org/remarkable/2. Work/Leadership.rmdoc")
 
-
-@pytest.mark.skipif(not FIXTURE.exists(), reason="Leadership fixture not available")
 class TestReadBundle:
-    def test_reads_visible_name(self) -> None:
-        assert read_bundle(FIXTURE).visible_name == "Leadership"
+    """Reading structure and metadata from a handwritten bundle."""
 
-    def test_orders_ten_pages(self) -> None:
-        assert len(read_bundle(FIXTURE).page_ids) == 10
+    def _write_bundle(self, path: Path, visible_name: str, page_count: int) -> list[str]:
+        """Write a handwritten bundle with `page_count` real v6 `.rm` pages.
 
-    def test_excludes_toc(self) -> None:
-        assert "toc" not in read_bundle(FIXTURE).page_ids
+        A `toc` entry is included in the page list to prove it is excluded.
+        """
+        uuid = "77777777-7777-7777-7777-777777777777"
+        page_ids = [f"{i:08d}-aaaa-aaaa-aaaa-aaaaaaaaaaaa" for i in range(page_count)]
+        pages = [{"id": "toc", "deleted": None}]
+        pages += [{"id": pid, "deleted": None} for pid in page_ids]
+        content = {"cPages": {"pages": pages}}
+        metadata = {"visibleName": visible_name, "type": "DocumentType"}
+        with zipfile.ZipFile(path, "w") as zf:
+            zf.writestr(f"{uuid}.content", json.dumps(content))
+            zf.writestr(f"{uuid}.metadata", json.dumps(metadata))
+            for pid in page_ids:
+                buf = io.BytesIO()
+                write_blocks(buf, simple_text_document("stroke"))
+                zf.writestr(f"{uuid}/{pid}.rm", buf.getvalue())
+        return page_ids
 
-    def test_handwritten_is_not_imported(self) -> None:
-        bundle = read_bundle(FIXTURE)
+    def test_reads_visible_name(self, tmp_path: Path) -> None:
+        path = tmp_path / "n.rmdoc"
+        self._write_bundle(path, "My Notebook", page_count=3)
+        assert read_bundle(path).visible_name == "My Notebook"
+
+    def test_orders_pages(self, tmp_path: Path) -> None:
+        path = tmp_path / "n.rmdoc"
+        page_ids = self._write_bundle(path, "My Notebook", page_count=3)
+        assert read_bundle(path).page_ids == page_ids
+
+    def test_excludes_toc(self, tmp_path: Path) -> None:
+        path = tmp_path / "n.rmdoc"
+        self._write_bundle(path, "My Notebook", page_count=3)
+        assert "toc" not in read_bundle(path).page_ids
+
+    def test_handwritten_is_not_imported(self, tmp_path: Path) -> None:
+        path = tmp_path / "n.rmdoc"
+        self._write_bundle(path, "My Notebook", page_count=1)
+        bundle = read_bundle(path)
         assert bundle.is_imported is False
         assert bundle.embedded_pdf is None
 
@@ -53,12 +81,12 @@ class TestDeletedPages:
         }
         with zipfile.ZipFile(path, "w") as zf:
             zf.writestr(f"{uuid}.content", json.dumps(content))
-            zf.writestr(f"{uuid}.metadata", '{"visibleName": "Matrix", "type": "DocumentType"}')
+            zf.writestr(f"{uuid}.metadata", '{"visibleName": "Notes", "type": "DocumentType"}')
             zf.writestr(f"{uuid}/{live_id}.rm", b"stroke-bytes")
         return live_id, dead_id
 
     def test_excludes_deleted_page_id(self, tmp_path: Path) -> None:
-        path = tmp_path / "matrix.rmdoc"
+        path = tmp_path / "notes.rmdoc"
         live_id, dead_id = self._write_bundle(path)
 
         bundle = read_bundle(path)
