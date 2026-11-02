@@ -13,14 +13,15 @@ from rmsync.core import _is_current, find_rmapi, render
 _MINIMAL_PDF = b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
 
 
-def _write_bundle(path: Path, visible_name: str) -> None:
+def _write_bundle(path: Path, visible_name: str, uuid: str | None = None) -> None:
     """Write a minimal imported `.rmdoc` carrying an embedded PDF.
 
     Using the imported path exercises `render`'s folder-mirroring and
     incremental logic without depending on a parseable `.rm` stroke file;
     stroke rendering itself is covered by the Leadership behaviour test.
     """
-    uuid = "11111111-1111-1111-1111-111111111111"
+    if uuid is None:
+        uuid = "11111111-1111-1111-1111-111111111111"
     path.parent.mkdir(parents=True, exist_ok=True)
     name = visible_name
     with zipfile.ZipFile(path, "w") as zf:
@@ -113,3 +114,51 @@ class TestRenderResilience:
         failed_path, error = report.failed[0]
         assert failed_path == source / "bad.rmdoc"
         assert "malformed bundle" in error
+
+
+class TestRenderTrash:
+    """Bundles under a top-level `trash/` dir are skipped unless opted in."""
+
+    def test_trashed_bundle_skipped_by_default(self, tmp_path: Path) -> None:
+        source = tmp_path / "src"
+        output = tmp_path / "out"
+        _write_bundle(source / "trash" / "deleted.rmdoc", "Deleted Note")
+        _write_bundle(source / "Work" / "live.rmdoc", "Live Note")
+
+        report = render(source, output)
+
+        assert report.rendered == [output / "Work" / "Live Note.pdf"]
+        assert report.trashed == [source / "trash" / "deleted.rmdoc"]
+        assert not (output / "trash" / "Deleted Note.pdf").exists()
+
+    def test_trashed_bundle_rendered_when_included(self, tmp_path: Path) -> None:
+        source = tmp_path / "src"
+        output = tmp_path / "out"
+        _write_bundle(source / "trash" / "deleted.rmdoc", "Deleted Note")
+
+        report = render(source, output, include_trash=True)
+
+        assert (output / "trash" / "Deleted Note.pdf").exists()
+        assert report.trashed == []
+        assert output / "trash" / "Deleted Note.pdf" in report.rendered
+
+
+class TestRenderNameCollision:
+    """Two bundles that resolve to the same output name must not overwrite."""
+
+    def test_colliding_names_both_rendered_distinctly(self, tmp_path: Path) -> None:
+        source = tmp_path / "src"
+        output = tmp_path / "out"
+        uuid_a = "aaaaaaaa-1111-1111-1111-111111111111"
+        uuid_b = "bbbbbbbb-2222-2222-2222-222222222222"
+        _write_bundle(source / "Work" / "a.rmdoc", "Notes", uuid=uuid_a)
+        _write_bundle(source / "Work" / "b.rmdoc", "Notes", uuid=uuid_b)
+
+        report = render(source, output)
+
+        assert len(report.rendered) == 2
+        assert len({p.name for p in report.rendered}) == 2
+        for path in report.rendered:
+            assert path.exists()
+        assert len(report.warnings) == 1
+        assert "collision" in report.warnings[0]

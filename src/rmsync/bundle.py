@@ -49,10 +49,16 @@ def read_bundle(path: Path) -> Bundle:
             if page.get("id") != _TOC_STEM and not page.get("deleted")
         ]
 
+    # A blank or whitespace-only visibleName must not yield an un-named or
+    # hidden (".pdf" dotfile) output. Fall back to the bundle uuid.
+    visible_name = metadata["visibleName"]
+    if not visible_name.strip():
+        visible_name = uuid
+
     return Bundle(
         path=path,
         uuid=uuid,
-        visible_name=metadata["visibleName"],
+        visible_name=visible_name,
         page_ids=page_ids,
         embedded_pdf=embedded_pdf,
     )

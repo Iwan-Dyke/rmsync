@@ -65,3 +65,34 @@ class TestDeletedPages:
 
         assert bundle.page_ids == [live_id]
         assert dead_id not in bundle.page_ids
+
+
+class TestBlankVisibleName:
+    """A blank or whitespace-only visibleName must fall back to the uuid."""
+
+    def _write_bundle(self, path: Path, visible_name: str) -> str:
+        uuid = "44444444-4444-4444-4444-444444444444"
+        content = {"cPages": {"pages": []}}
+        metadata = {"visibleName": visible_name, "type": "DocumentType"}
+        with zipfile.ZipFile(path, "w") as zf:
+            zf.writestr(f"{uuid}.content", json.dumps(content))
+            zf.writestr(f"{uuid}.metadata", json.dumps(metadata))
+        return uuid
+
+    def test_empty_name_falls_back_to_uuid(self, tmp_path: Path) -> None:
+        path = tmp_path / "blank.rmdoc"
+        uuid = self._write_bundle(path, "")
+
+        assert read_bundle(path).visible_name == uuid
+
+    def test_whitespace_name_falls_back_to_uuid(self, tmp_path: Path) -> None:
+        path = tmp_path / "ws.rmdoc"
+        uuid = self._write_bundle(path, "   ")
+
+        assert read_bundle(path).visible_name == uuid
+
+    def test_normal_name_unchanged(self, tmp_path: Path) -> None:
+        path = tmp_path / "named.rmdoc"
+        self._write_bundle(path, "Real Name")
+
+        assert read_bundle(path).visible_name == "Real Name"

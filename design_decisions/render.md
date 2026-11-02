@@ -85,3 +85,31 @@ failures at the per-bundle boundary, records each as `(path, message)` in
 `N rendered, M unchanged, K failed` and lists each failure. The catch is scoped
 to the per-bundle loop body only — we keep the error message and surface it
 rather than swallowing exceptions we cannot describe.
+
+## Trash exclusion, blank-name fallback, and collision disambiguation
+
+A UAT run over the full real notebook set surfaced three defects, fixed here.
+
+**Trashed notebooks are not rendered by default.** `rmapi mget / ` pulls the
+reMarkable **trash** folder, so deleted bundles land under a top-level
+`trash/` directory of the source. `core.render` now skips any bundle whose
+path is under `trash/` and counts them separately (`RenderReport.trashed`,
+surfaced as `trashed-skipped` in the CLI summary, distinct from `unchanged`). A
+`--include-trash` flag (default off) overrides this when deleted work really
+does need rendering. Skipping on the `trash/` path — rather than the
+`parent: "trash"` metadata signal, which would also work — is the simplest
+check and avoids pulling/parsing cost.
+
+**A blank visibleName falls back to the uuid.** One trashed bundle carried
+`visibleName: ""`, which produced an output file literally named `.pdf` — a
+hidden dotfile. `read_bundle` now substitutes the bundle uuid whenever
+`visibleName` is empty or whitespace-only, so every notebook has a visible,
+named output (`<uuid>.pdf`) and no silent blank names are possible.
+
+**Name collisions are disambiguated, never overwritten.** Two notebooks sharing
+a `visibleName` in the same folder would map to the same output path and one
+would silently overwrite the other — latent data loss (zero collisions in the
+current data, but a real bug). `core.render` tracks the output names already
+claimed per directory within a pass; on a collision it appends a short
+uuid-derived suffix (`Name (ab12cd).pdf`) and records a warning in
+`RenderReport.warnings`, which the CLI prints. Both notebooks are preserved.
