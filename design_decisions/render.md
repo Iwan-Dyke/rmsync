@@ -63,3 +63,25 @@ offers nothing we need here, so `pypdf` wins on minimalism.
 - We depend on `rmc`'s internal `svg` and `writing_tools` modules, not just its
   CLI. If `rmc` restructures those internals, the shim and the in-process call
   may need revisiting — an accepted trade-off for a reliable palette fix.
+
+## Deleted pages and per-bundle resilience
+
+**Deleted pages are not listed.** A page entry in `cPages.pages[]` can carry a
+truthy `deleted` object (live pages carry `deleted: null`). A deleted page has
+no `<uuid>/<page_id>.rm` file in the archive, so including it crashed rendering
+with a `KeyError`. `read_bundle` now excludes any page with a truthy `deleted`
+value when building `page_ids`, alongside the existing `toc` skip. A notebook
+therefore renders only its live pages (e.g. Matrix: 16 declared, 1 deleted, 15
+rendered).
+
+**A listed-but-absent `.rm` is a hard error, not a silent skip.** If, after
+excluding deleted pages, a listed page's stroke file is still missing, the
+bundle is genuinely malformed; rendering raises a clear error naming the bundle
+and page rather than skipping silently (team standard: no silent failures).
+
+**One bad bundle no longer aborts the whole run.** `core.render` catches render
+failures at the per-bundle boundary, records each as `(path, message)` in
+`RenderReport.failed`, and continues with the rest. The CLI reports
+`N rendered, M unchanged, K failed` and lists each failure. The catch is scoped
+to the per-bundle loop body only — we keep the error message and surface it
+rather than swallowing exceptions we cannot describe.

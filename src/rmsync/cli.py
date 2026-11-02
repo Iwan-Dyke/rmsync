@@ -58,7 +58,13 @@ def _add_force(p: argparse.ArgumentParser) -> None:
 def _print_report(report: RenderReport) -> None:
     for path in report.rendered:
         print(f"rendered {path}")
-    print(f"{len(report.rendered)} rendered, {len(report.skipped)} unchanged")
+    for bundle_path, error in report.failed:
+        print(f"FAILED {bundle_path}: {error}")
+    print(
+        f"{len(report.rendered)} rendered, "
+        f"{len(report.skipped)} unchanged, "
+        f"{len(report.failed)} failed"
+    )
 
 
 if __name__ == "__main__":

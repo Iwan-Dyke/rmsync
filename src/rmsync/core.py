@@ -21,6 +21,7 @@ class RenderReport:
 
     rendered: list[Path] = field(default_factory=list)
     skipped: list[Path] = field(default_factory=list)
+    failed: list[tuple[Path, str]] = field(default_factory=list)
 
 
 def find_rmapi() -> Path:
@@ -47,13 +48,16 @@ def render(source: Path, output: Path, *, force: bool = False) -> RenderReport:
     report = RenderReport()
     for bundle_path in sorted(source.rglob("*.rmdoc")):
         rel_dir = bundle_path.parent.relative_to(source)
-        bundle = read_bundle(bundle_path)
-        out_path = output / rel_dir / f"{bundle.visible_name}.pdf"
-        if not force and _is_current(bundle_path, out_path):
-            report.skipped.append(out_path)
-            continue
-        render_bundle(bundle, out_path)
-        report.rendered.append(out_path)
+        try:
+            bundle = read_bundle(bundle_path)
+            out_path = output / rel_dir / f"{bundle.visible_name}.pdf"
+            if not force and _is_current(bundle_path, out_path):
+                report.skipped.append(out_path)
+                continue
+            render_bundle(bundle, out_path)
+            report.rendered.append(out_path)
+        except Exception as exc:  # noqa: BLE001 — per-bundle boundary: record and continue
+            report.failed.append((bundle_path, f"{type(exc).__name__}: {exc}"))
     return report
 
 

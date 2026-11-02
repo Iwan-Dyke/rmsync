@@ -58,8 +58,15 @@ def _render_handwritten(bundle: Bundle, out_path: Path) -> None:
     """Render each page to SVG, convert to PDF, and merge into one PDF."""
     writer = PdfWriter()
     with zipfile.ZipFile(bundle.path) as zf:
+        available = set(zf.namelist())
         for page_id in bundle.page_ids:
-            rm_bytes = zf.read(f"{bundle.uuid}/{page_id}.rm")
+            rm_name = f"{bundle.uuid}/{page_id}.rm"
+            if rm_name not in available:
+                raise ValueError(
+                    f"malformed bundle {bundle.path}: listed page {page_id} "
+                    f"has no stroke file {rm_name!r} in the archive"
+                )
+            rm_bytes = zf.read(rm_name)
             svg_text = _rm_to_svg(rm_bytes)
             pdf_bytes = cairosvg.svg2pdf(bytestring=svg_text.encode("utf-8"))
             writer.append(PdfReader(io.BytesIO(pdf_bytes)))

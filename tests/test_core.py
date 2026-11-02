@@ -29,6 +29,22 @@ def _write_bundle(path: Path, visible_name: str) -> None:
         zf.writestr(f"{uuid}.pdf", _MINIMAL_PDF)
 
 
+def _write_malformed_bundle(path: Path, visible_name: str) -> None:
+    """Write a handwritten `.rmdoc` that lists a page with no stroke file.
+
+    This is a genuinely malformed archive: `render_bundle` raises when the
+    listed `.rm` is absent, letting us prove one bad bundle does not abort
+    the whole run.
+    """
+    uuid = "33333333-3333-3333-3333-333333333333"
+    missing_id = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    content = f'{{"cPages": {{"pages": [{{"id": "{missing_id}", "deleted": null}}]}}}}'
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr(f"{uuid}.content", content)
+        zf.writestr(f"{uuid}.metadata", f'{{"visibleName": "{visible_name}", "type": "DocumentType"}}')
+
+
 class TestFindRmapi:
     def test_errors_clearly_when_absent(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr("rmsync.core.shutil.which", lambda _: None)
@@ -78,3 +94,22 @@ class TestRenderIncremental:
 
         forced = render(source, output, force=True)
         assert len(forced.rendered) == 1
+
+
+class TestRenderResilience:
+    """One unrenderable bundle must not abort the whole run."""
+
+    def test_one_failure_does_not_abort_run(self, tmp_path: Path) -> None:
+        source = tmp_path / "src"
+        output = tmp_path / "out"
+        _write_bundle(source / "good.rmdoc", "Good")
+        _write_malformed_bundle(source / "bad.rmdoc", "Bad")
+
+        report = render(source, output)
+
+        assert report.rendered == [output / "Good.pdf"]
+        assert (output / "Good.pdf").exists()
+        assert len(report.failed) == 1
+        failed_path, error = report.failed[0]
+        assert failed_path == source / "bad.rmdoc"
+        assert "malformed bundle" in error

@@ -46,7 +46,7 @@ def read_bundle(path: Path) -> Bundle:
         page_ids = [
             page["id"]
             for page in content.get("cPages", {}).get("pages", [])
-            if page.get("id") != _TOC_STEM
+            if page.get("id") != _TOC_STEM and not page.get("deleted")
         ]
 
     return Bundle(
