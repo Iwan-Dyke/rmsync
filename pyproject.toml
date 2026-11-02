@@ -3,6 +3,8 @@ name = "rmsync"
 version = "0.1.0"
 description = "Sync reMarkable notebooks from the cloud and render them to PDF."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
     "rmc~=0.3.0",
